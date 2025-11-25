@@ -2,9 +2,9 @@ package infrastructure
 
 import (
 	"database/sql"
-	"esp32/src/core"
-	"esp32/src/internal/services/auth/application"
-	"esp32/src/internal/services/auth/infrastructure/controllers"
+	"pulse_sense/src/core"
+	"pulse_sense/src/internal/services/auth/application"
+	"pulse_sense/src/internal/services/auth/infrastructure/controllers"
 )
 
 type AuthDependencies struct {

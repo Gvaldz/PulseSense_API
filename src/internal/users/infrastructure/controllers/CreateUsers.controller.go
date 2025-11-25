@@ -3,9 +3,10 @@ package controllers
 import (
 	"net/http"
 
+	"pulse_sense/src/internal/users/application"
+	"pulse_sense/src/internal/users/domain"
+
 	"github.com/gin-gonic/gin"
-	"esp32/src/internal/users/application"
-	"esp32/src/internal/users/domain"
 )
 
 type CreateUserController struct {
@@ -32,9 +33,9 @@ func (h *CreateUserController) CreateUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Usuario creado correctamente",
 		"user": gin.H{
-			"id":     createdUser.IdUsuario,
-			"nombre": createdUser.Nombre,
-			"correo": createdUser.Correo,
+			"id":      createdUser.IdUsuario,
+			"nombres": createdUser.Nombres,
+			"correo":  createdUser.Correo,
 		},
 	})
 }

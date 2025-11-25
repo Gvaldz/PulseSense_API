@@ -1,6 +1,6 @@
 package main
 
-import "esp32/src/cmd"
+import "pulse_sense/src/cmd"
 
 func main() {
 	cmd.Init()

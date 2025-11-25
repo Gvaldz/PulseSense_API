@@ -3,13 +3,14 @@ package domain
 import (
 	"log"
 	"time"
+
 	"github.com/gorilla/websocket"
 )
 
 type Session struct {
 	conn         *websocket.Conn
-	UserID       int32  
-	Role         string 
+	UserID       int32
+	Role         string
 	closeHandler func(userID int32)
 }
 
@@ -45,6 +46,6 @@ func (s *Session) StartHandling() {
 	}
 }
 
-func (s *Session) SendUpdate(cageData interface{}) error {
-	return s.conn.WriteJSON(cageData)
+func (s *Session) SendUpdate(patientData interface{}) error {
+	return s.conn.WriteJSON(patientData)
 }

@@ -1,7 +1,7 @@
 package application
 
 import (
-	"esp32/src/internal/users/domain"
+	"pulse_sense/src/internal/users/domain"
 )
 
 type DeleteUser struct {
@@ -12,6 +12,6 @@ func NewDeleteUser(repo domain.UserRepository) *DeleteUser {
 	return &DeleteUser{repo: repo}
 }
 
-func (lp *DeleteUser) Execute(id int32) error{
+func (lp *DeleteUser) Execute(id int32) error {
 	return lp.repo.DeleteUser(id)
 }

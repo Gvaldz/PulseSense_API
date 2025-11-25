@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"esp32/src/internal/users/application"
 	"fmt"
 	"net/http"
+	"pulse_sense/src/internal/users/application"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,26 +20,26 @@ func NewUpdatePasswordController(updatePasswordUC *application.UpdatePassword) *
 
 func (c *UpdatePasswordController) UpdatePassword(ctx *gin.Context) {
 	id := ctx.Param("id")
-	
+
 	var request struct {
 		NewPassword string `json:"newPassword" binding:"required"`
 	}
-	
+
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	var idInt int32
 	if _, err := fmt.Sscanf(id, "%d", &idInt); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
 		return
 	}
-	
+
 	if err := c.updatePasswordUC.Execute(idInt, request.NewPassword); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	ctx.JSON(http.StatusOK, gin.H{"message": "Contraseña actualizada correctamente"})
 }

@@ -5,42 +5,38 @@ import (
 	"log"
 	"os"
 	"fmt"
-	"esp32/src/core"
+	"pulse_sense/src/core"
+
+	dependencesPatient "pulse_sense/src/internal/sensores/patients/domain"
+	controllersPatient "pulse_sense/src/internal/sensores/patients/infrastructure/controllers"
+	dependencesSigns "pulse_sense/src/internal/sensores/signos/domain"
+	controllersSigns "pulse_sense/src/internal/sensores/signos/infrastructure/controllers"
+	dependencesMotion "pulse_sense/src/internal/sensores/motion/domain"
+	controllersMotion "pulse_sense/src/internal/sensores/motion/infrastructure/controllers"
+
 	"github.com/joho/godotenv"
-	depenencesHumidity		 "esp32/src/internal/sensores/humidity/domain"
-	controllersHumidity  	 "esp32/src/internal/sensores/humidity/infrastructure/controllers"
-	dependencesTemperature 	 "esp32/src/internal/sensores/temperatura/domain"
-	controllersTemperature   "esp32/src/internal/sensores/temperatura/infrastructure/controllers"
-	dependencesMotion 		 "esp32/src/internal/sensores/motion/domain"
-	controllersMotion 		 "esp32/src/internal/sensores/motion/infrastructure/controllers"
-	dependencesFood			 "esp32/src/internal/sensores/food/domain"
-	controllersFood			 "esp32/src/internal/sensores/food/infrastructure/controllers"
-	dependencesCage			 "esp32/src/internal/sensores/cages/domain"
-	controllersCage			 "esp32/src/internal/sensores/cages/infrastructure/controllers"
-	amqp 					 "github.com/rabbitmq/amqp091-go"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type RabbitMQConsumer struct {
-	conn       *core.AMQPConnection
-	CreateHumidity *controllersHumidity.CreateHumidityController
-	CreateTemp *controllersTemperature.CreateTemperatureController
-	CreateMov  *controllersMotion.CreateMotionController
-	CreateFood *controllersFood.CreateStatusFoodController
-	CreateCage *controllersCage.CreateCageController
+	conn           *core.AMQPConnection
+	CreateSign     *controllersSigns.CreateSignsController
+	CreatePatient  *controllersPatient.CreatePatientController
+	CreateMotion   *controllersMotion.CreateMotionController
 }
 
-func NewRabbitMQConsumer(conn *core.AMQPConnection, CreateHumidity *controllersHumidity.CreateHumidityController, createTemp *controllersTemperature.CreateTemperatureController, createMov *controllersMotion.CreateMotionController, createFood *controllersFood.CreateStatusFoodController, createCage *controllersCage.CreateCageController) *RabbitMQConsumer {
-	
-
+func NewRabbitMQConsumer(
+	conn *core.AMQPConnection, 
+	createSign *controllersSigns.CreateSignsController, 
+	createPatient *controllersPatient.CreatePatientController,
+	createMotion *controllersMotion.CreateMotionController,
+) *RabbitMQConsumer {
 	return &RabbitMQConsumer{
-		conn:       conn,
-		CreateHumidity: CreateHumidity,
-		CreateTemp: createTemp,
-		CreateMov: createMov,
-		CreateFood: createFood,
-		CreateCage: createCage,
+		conn:           conn,
+		CreateSign:     createSign,
+		CreatePatient:  createPatient,
+		CreateMotion:   createMotion,
 	}
-	
 }
 
 func (c *RabbitMQConsumer) Start() {
@@ -68,6 +64,17 @@ func (c *RabbitMQConsumer) Start() {
 		log.Fatalf("Error declarando cola: %v", err)
 	}
 
+	err = ch.QueueBind(
+		"sensores",         // queue name
+		"sensores/signos",  // routing key
+		"amq.topic",        // exchange
+		false,
+		nil,
+	)
+	if err != nil {
+		log.Fatalf("Error al enlazar cola a topic MQTT: %v", err)
+	}
+
 	msgs, err := ch.Consume(q.Name, "", true, false, false, false, nil)
 	if err != nil {
 		log.Fatalf("Error al consumir mensajes: %v", err)
@@ -77,13 +84,11 @@ func (c *RabbitMQConsumer) Start() {
 	for msg := range msgs {
 		var sensorData struct {
 			Sensor      string  `json:"sensor"`
-			IDHamster   string     `json:"idhamster"`
-			Humedad     float64 `json:"humedad,omitempty"`
-			Temperatura float64 `json:"temperatura,omitempty"`
-			Movimiento  int   	`json:"movimiento,omitempty"`
-			Alimento    int   	`json:"alimento,omitempty"`
-			Porcentaje  float32 `json:"porcentaje,omitempty"`
-			Token       string  `json:"token"` 
+			IDPaciente  int     `json:"IDPaciente"`
+			Signo       int     `json:"Signo,omitempty"`
+			Valor       float64 `json:"Valor,omitempty"`
+			Unidad      string  `json:"Unidad,omitempty"`
+			Movimiento  int     `json:"movimiento,omitempty"`
 		}
 
 		if err := json.Unmarshal(msg.Body, &sensorData); err != nil {
@@ -91,110 +96,77 @@ func (c *RabbitMQConsumer) Start() {
 			continue
 		}
 
-		log.Printf("Mensaje recibido: Sensor: %s, IDamster: %s\n", sensorData.Sensor, sensorData.IDHamster)
+		log.Printf("Mensaje recibido: Sensor: %s, IDPaciente: %v\n", sensorData.Sensor, sensorData.IDPaciente)
 
-
-		if sensorData.Sensor == "idhamster"{
-
-			if sensorData.IDHamster == "" {
+		if sensorData.Sensor == "IDPaciente" {
+			if sensorData.IDPaciente == 0 {
 				log.Println("Advertencia: ID no valido.")
 				continue
 			}
-	
-			jaula := dependencesCage.Cage{
-				Idjaula: string(sensorData.IDHamster),
-			}
-	
-			if err := c.CreateCage.ProcessCage(jaula); err != nil {
-				log.Printf("Error al procesar jaula: %v", err)}
-		}
 
+			var idPacienteInt int32 = int32(sensorData.IDPaciente)
+
+			paciente := dependencesPatient.Patient{
+				IdPaciente: idPacienteInt,
+			}
+
+			if err := c.CreatePatient.Processpatient(paciente); err != nil {
+				log.Printf("Error al procesar paciente: %v", err)
+			}
+		}
 
 		switch sensorData.Sensor {
-		case "temperatura":
-			if sensorData.Temperatura == 0 {
-				log.Printf("Temperatura no válida para el hámster ID: %s\n", sensorData.IDHamster)
+		case "signos":
+			if sensorData.Signo == 0 {
+				log.Printf("Signo no valido para el paciente ID: %s\n", sensorData.IDPaciente)
 				continue
 			}
-			log.Printf("Procesando temperatura: %v", sensorData.Temperatura)
-		
-			temperature := dependencesTemperature.Temperature{
-				IDHamster:   string(sensorData.IDHamster),
-				Temperatura: sensorData.Temperatura,
+			log.Printf("Procesando Signo: %v", sensorData.Signo)
+
+			idPacienteInt := sensorData.IDPaciente
+			sign := dependencesSigns.Sign{
+				IDPaciente: idPacienteInt,
+				IDSigno:    sensorData.Signo,     
+				Valor:      sensorData.Valor,           
+				Unidad:     sensorData.Unidad,
 			}
-		
-			log.Printf("Temperatura procesada: %v", temperature)
-		
-			if c.CreateTemp != nil {
-				err := c.CreateTemp.ProcessTemperature(temperature)
+
+			log.Printf("Signo procesado: %v", sign)
+
+			if c.CreateSign != nil {
+				err := c.CreateSign.ProcessSign(sign)
 				if err != nil {
-					log.Printf("Error procesando temperatura: %v", err)
+					log.Printf("Error procesando Signo: %v", err)
 				} else {
-					log.Println("Temperatura procesada exitosamente.")
-		
+					log.Println("Signo procesado exitosamente.")
 				}
 			} else {
-				log.Println("El controlador de temperatura es nil, no se puede procesar.")
-			}
-		
-		case "humedad":
-			if sensorData.Humedad == 0 {
-				log.Printf("Humedad no válida para el hámster ID: %s\n", sensorData.IDHamster)
-				continue
-			}
-			log.Printf("Procesando humedad: %v", sensorData.Humedad)
-
-			humidity := depenencesHumidity.Humidity{
-				IDHamster: string(sensorData.IDHamster),
-				Humedad:   sensorData.Humedad,
+				log.Println("El controlador de Signo es nil, no se puede procesar.")
 			}
 
-			log.Printf("Humedad procesada: %v", humidity)
-
-			if c.CreateHumidity != nil {
-				err := c.CreateHumidity.ProcessHumidity(humidity)
-				if err != nil {
-					log.Printf("Error procesando humedad: %v", err)
-				} else {
-					log.Println("Humedad procesada exitosamente.")
-				}
-			} else {
-				log.Println("El controlador de humedad es nil, no se puede procesar.")
-			}
 		case "movimiento":
-			if sensorData.IDHamster == "" {
-				log.Println("Advertencia: Datos no válidos o mensaje incorrecto.")
+			if sensorData.IDPaciente == 0 {
+				log.Println("Advertencia: ID de paciente no válido para movimiento.")
 				continue
 			}
-	
-			mov := sensorData.Movimiento == 1  
+			
+			mov := sensorData.Movimiento == 1
 			fmt.Printf("Mensaje de Movimiento recibido: %+v\n", sensorData)
-	
+
 			motion := dependencesMotion.Motion{
-				IDHamster:  string(sensorData.IDHamster),
-				Movimiento: mov,  
+				IDPaciente: sensorData.IDPaciente,
+				Movimiento: mov,
 			}
-	
-			if err := c.CreateMov.ProcessMotion(motion); err != nil {
-				log.Printf("Error al procesar el movimiento: %v", err)
+
+			if c.CreateMotion != nil {
+				if err := c.CreateMotion.ProcessMotion(motion); err != nil {
+					log.Printf("Error al procesar el movimiento: %v", err)
+				} else {
+					log.Println("Movimiento procesado exitosamente.")
+				}
+			} else {
+				log.Println("El controlador de Movimiento es nil, no se puede procesar.")
 			}
-		case "alimento":
-			if sensorData.Porcentaje == 0 {
-				log.Printf("Porcentaje de alimento no válido para el hámster ID: %s\n", sensorData.IDHamster)
-				continue
-			}
-		
-			food := dependencesFood.Food{
-				IDHamster:  string(sensorData.IDHamster),
-				Alimento:   sensorData.Alimento,
-				Porcentaje: sensorData.Porcentaje,
-			}
-		
-			err := c.CreateFood.ProcessFood(food)
-			if err != nil {
-				log.Printf("Error procesando estado de alimento: %v", err)
-			}
-		
 		}
-}
+	}
 }

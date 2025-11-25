@@ -1,7 +1,7 @@
 package infrastructure
 
 import (
-	"esp32/src/internal/services/auth/infrastructure/controllers"
+	"pulse_sense/src/internal/services/auth/infrastructure/controllers"
 
 	"github.com/gin-gonic/gin"
 )

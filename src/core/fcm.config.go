@@ -1,7 +1,6 @@
 package core
 
 import (
-	"log"
 	"os"
 )
 
@@ -21,12 +20,11 @@ func LoadConfig() {
 	Config.FCM.ProjectID = os.Getenv("FCM_PROJECT_ID")
 
 	if Config.FCM.CredentialsPath == "" {
-		Config.FCM.CredentialsPath = "src/internal/fcm/serviceAccountKey.json"
+		Config.FCM.CredentialsPath = "src/internal/services/fcm/serviceAccountKey.json"
 	}
 
 	if Config.FCM.ProjectID == "" {
 		Config.FCM.ProjectID = "rodismart-77622"
 	}
 
-	log.Printf("Ruta de credenciales FCM: %s\n", Config.FCM.CredentialsPath)
 }

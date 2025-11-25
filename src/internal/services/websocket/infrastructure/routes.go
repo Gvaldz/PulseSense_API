@@ -1,7 +1,7 @@
 package infrastructure
 
 import (
-	"esp32/src/internal/services/websocket/infrastructure/controllers"
+	"pulse_sense/src/internal/services/websocket/infrastructure/controllers"
 
 	"github.com/gin-gonic/gin"
 )

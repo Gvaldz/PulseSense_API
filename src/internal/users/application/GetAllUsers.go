@@ -1,7 +1,7 @@
 package application
 
 import (
-	"esp32/src/internal/users/domain"
+	"pulse_sense/src/internal/users/domain"
 )
 
 type GetAllUsers struct {
@@ -13,5 +13,5 @@ func NewGetAllUsers(userRepo domain.UserRepository) *GetAllUsers {
 }
 
 func (lp *GetAllUsers) Execute() ([]domain.User, error) {
-    return lp.userRepo.GetAllUsers()
+	return lp.userRepo.GetAllUsers()
 }

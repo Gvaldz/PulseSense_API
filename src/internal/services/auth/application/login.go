@@ -2,9 +2,9 @@ package application
 
 import (
 	"errors"
-	"esp32/src/core"
-	auth "esp32/src/internal/services/auth/domain"
-	user "esp32/src/internal/users/domain"
+	"pulse_sense/src/core"
+	auth "pulse_sense/src/internal/services/auth/domain"
+	user "pulse_sense/src/internal/users/domain"
 )
 
 type Login struct {
@@ -28,19 +28,19 @@ func NewLogin(
 	}
 }
 
-func (uc *Login) Execute(credentials user.User) (auth.Token, string, error) {
+func (uc *Login) Execute(credentials user.User) (auth.Token, int32, error) {
 	user, err := uc.authRepo.FindUserByEmail(credentials.Correo)
 	if err != nil {
-		return auth.Token{}, "", errors.New("datos incorrectos")
+		return auth.Token{}, 0, errors.New("datos incorrectos")
 	}
 
 	if err := uc.hasher.Compare(user.Contrasena, credentials.Contrasena); err != nil {
-		return auth.Token{}, "", errors.New("datos incorrectos")
+		return auth.Token{}, 0, errors.New("datos incorrectos")
 	}
 
 	token, err := uc.tokenService.GenerateToken(user.IdUsuario, user.Correo, user.Tipo)
 	if err != nil {
-		return auth.Token{}, "", errors.New("fallo en generar token")
+		return auth.Token{}, 0, errors.New("fallo en generar token")
 	}
 
 	go func() {

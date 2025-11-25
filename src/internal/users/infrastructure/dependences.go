@@ -2,11 +2,11 @@ package infrastructure
 
 import (
 	"database/sql"
-	"esp32/src/core"
-	"esp32/src/internal/services/fcm"
-	"esp32/src/internal/users/application"
-	"esp32/src/internal/users/infrastructure/controllers"
-	middleware "esp32/src/server/middleware"
+	"pulse_sense/src/core"
+	"pulse_sense/src/internal/services/fcm"
+	"pulse_sense/src/internal/users/application"
+	"pulse_sense/src/internal/users/infrastructure/controllers"
+	middleware "pulse_sense/src/server/middleware"
 )
 
 type UserDependencies struct {
@@ -39,6 +39,9 @@ func (d *UserDependencies) GetRoutes() *UserRoutes {
 	updateUserUseCase := application.NewUpdateUser(d.UserRepo)
 	updatePasswordUseCase := application.NewUpdatePassword(d.UserRepo, d.Hasher)
 	deleteUserUseCase := application.NewDeleteUser(d.UserRepo)
+	getDoctorsByPatient := application.NewGetDoctorsByPatientId(d.UserRepo)
+	getNursePerHospitalUseCase := application.NewGetNursePerHospital(d.UserRepo)
+	getNursePerPatientUseCase := application.NewGetNursePerPatient(d.UserRepo)
 	fcmController := controllers.NewFCMController(d.UserRepo)
 
 	createUserController := controllers.NewCreateUserController(createUserUseCase)
@@ -47,6 +50,9 @@ func (d *UserDependencies) GetRoutes() *UserRoutes {
 	updateUserController := controllers.NewUpdateUserController(updateUserUseCase)
 	updatePasswordController := controllers.NewUpdatePasswordController(updatePasswordUseCase)
 	deleteUserController := controllers.NewDeleteUserController(deleteUserUseCase)
+	getDoctorsByPatientController := controllers.NewGetDoctorsByPatientIdController(getDoctorsByPatient)
+	getNursePerHospitalController := controllers.NewGetNursePerHospitalController(getNursePerHospitalUseCase)
+	getNursePerPatientController := controllers.NewGetNursePerPatientController(getNursePerPatientUseCase)
 	authMiddleware := middleware.AuthMiddleware(d.TokenService, d.AuthRepo, "usuario")
 
 	return NewUserRoutes(
@@ -56,6 +62,9 @@ func (d *UserDependencies) GetRoutes() *UserRoutes {
 		updateUserController,
 		updatePasswordController,
 		deleteUserController,
+		getDoctorsByPatientController,
+		getNursePerHospitalController,
+		getNursePerPatientController,
 		fcmController,
 		authMiddleware,
 	)

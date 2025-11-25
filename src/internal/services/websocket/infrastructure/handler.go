@@ -1,9 +1,9 @@
 package infrastructure
 
 import (
-	"esp32/src/core"
-	"esp32/src/internal/services/websocket/application"
 	"net/http"
+	"pulse_sense/src/core"
+	"pulse_sense/src/internal/services/websocket/application"
 
 	"github.com/gin-gonic/gin"
 )

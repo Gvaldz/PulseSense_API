@@ -2,12 +2,12 @@ package infrastructure
 
 import (
 	"database/sql"
-	"esp32/src/core"
-	cages "esp32/src/internal/sensores/cages/infrastructure"
-	"esp32/src/internal/sensores/motion/application"
-	"esp32/src/internal/sensores/motion/infrastructure/controllers"
-	fcm "esp32/src/internal/services/fcm"
-	websocket "esp32/src/internal/services/websocket/application"
+	"pulse_sense/src/core"
+	"pulse_sense/src/internal/sensores/motion/application"
+	"pulse_sense/src/internal/sensores/motion/infrastructure/controllers"
+	patients "pulse_sense/src/internal/sensores/patients/infrastructure"
+	fcm "pulse_sense/src/internal/services/fcm"
+	websocket "pulse_sense/src/internal/services/websocket/application"
 )
 
 type MotionDependencies struct {
@@ -19,10 +19,10 @@ type MotionDependencies struct {
 }
 
 func NewMotionDependencies(
-	db *sql.DB, 
-	amqp *core.AMQPConnection, 
-	wsService *websocket.WebSocketService, 
-	fcmSender *fcm.FCMSender, 
+	db *sql.DB,
+	amqp *core.AMQPConnection,
+	wsService *websocket.WebSocketService,
+	fcmSender *fcm.FCMSender,
 	userRepo *core.UserRepository,
 ) *MotionDependencies {
 	return &MotionDependencies{
@@ -36,19 +36,19 @@ func NewMotionDependencies(
 
 func (d *MotionDependencies) GetRoutes() *MotionRoutes {
 	motionRepo := NewMotionRepo(d.DB, nil)
-	cageRepo := cages.NewCageRepo(d.DB)
+	cageRepo := patients.NewPatientRepo(d.DB)
 
 	createMotionUseCase := application.NewCreateMotion(motionRepo)
-	getByHamsterUseCase := application.NewGetByHamster(motionRepo)
+	getByHamsterUseCase := application.NewGetByPatient(motionRepo)
 
 	createMotionController := controllers.NewCreateMotionController(
-		createMotionUseCase, 
-		d.WsService, 
+		createMotionUseCase,
+		d.WsService,
 		cageRepo,
 		d.UserRepo,
 		d.FCMSender,
 	)
-	getByHamsterController := controllers.NewGetByHamsterController(getByHamsterUseCase)
+	getByHamsterController := controllers.NewGetByPatientController(getByHamsterUseCase)
 
 	return NewMotionRoutes(createMotionController, getByHamsterController)
 }

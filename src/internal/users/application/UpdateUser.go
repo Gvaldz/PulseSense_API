@@ -1,7 +1,7 @@
 package application
 
 import (
-	"esp32/src/internal/users/domain"
+	"pulse_sense/src/internal/users/domain"
 )
 
 type UpdateUser struct {

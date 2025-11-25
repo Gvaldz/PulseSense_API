@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"esp32/src/internal/users/application"
 	"net/http"
+	"pulse_sense/src/internal/users/application"
 	"strconv"
 
 	"github.com/gin-gonic/gin"

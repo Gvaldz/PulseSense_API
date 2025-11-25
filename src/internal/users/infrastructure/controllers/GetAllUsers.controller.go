@@ -1,19 +1,19 @@
 package controllers
 
 import (
-	"esp32/src/internal/users/application"
 	"net/http"
+	"pulse_sense/src/internal/users/application"
 
 	"github.com/gin-gonic/gin"
 )
 
 type GetAllUsersController struct {
-	GetAllUsers  *application.GetAllUsers
+	GetAllUsers *application.GetAllUsers
 }
 
 func NewGetAllUsersController(getAllUsers *application.GetAllUsers) *GetAllUsersController {
 	return &GetAllUsersController{
-		GetAllUsers:  getAllUsers,
+		GetAllUsers: getAllUsers,
 	}
 }
 

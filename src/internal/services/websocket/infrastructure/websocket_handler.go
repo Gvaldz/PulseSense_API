@@ -2,9 +2,9 @@ package infrastructure
 
 import (
 	"encoding/json"
-	"esp32/src/internal/services/websocket/domain"
 	"fmt"
 	"net/http"
+	"pulse_sense/src/internal/services/websocket/domain"
 	"sync"
 
 	"github.com/gorilla/websocket"

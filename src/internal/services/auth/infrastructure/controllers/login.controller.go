@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"esp32/src/internal/services/auth/application"
-	"esp32/src/internal/users/domain"
 	"net/http"
+	"pulse_sense/src/internal/services/auth/application"
+	"pulse_sense/src/internal/users/domain"
 
 	"github.com/gin-gonic/gin"
 )

@@ -2,8 +2,8 @@ package core
 
 import (
 	"errors"
-	"esp32/src/internal/services/auth/domain"
 	"os"
+	"pulse_sense/src/internal/services/auth/domain"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -21,7 +21,7 @@ func NewJWTService() *JWTService {
 	return &JWTService{secretKey: key}
 }
 
-func (s *JWTService) GenerateToken(userID int32, email string, userType string) (domain.Token, error) {
+func (s *JWTService) GenerateToken(userID int32, email string, userType int32) (domain.Token, error) {
 	expiresAt := time.Now().Add(24 * time.Hour).Unix()
 
 	claims := jwt.MapClaims{
@@ -40,6 +40,7 @@ func (s *JWTService) GenerateToken(userID int32, email string, userType string) 
 	return domain.Token{
 		Token:     tokenString,
 		ExpiresAt: expiresAt,
+		UserID:    userID,
 	}, nil
 }
 

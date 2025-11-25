@@ -2,15 +2,15 @@ package controllers
 
 import (
 	"context"
-	"esp32/src/core"
-	cages "esp32/src/internal/sensores/cages/domain"
-	"esp32/src/internal/sensores/motion/application"
-	"esp32/src/internal/sensores/motion/domain"
-	fcm "esp32/src/internal/services/fcm"
-	websocket "esp32/src/internal/services/websocket/application"
 	"fmt"
 	"log"
 	"net/http"
+	"pulse_sense/src/core"
+	patients "pulse_sense/src/internal/sensores/patients/domain"
+	"pulse_sense/src/internal/sensores/motion/application"
+	"pulse_sense/src/internal/sensores/motion/domain"
+	fcm "pulse_sense/src/internal/services/fcm"
+	websocket "pulse_sense/src/internal/services/websocket/application"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +19,7 @@ import (
 type CreateMotionController struct {
 	createMotion *application.CreateMotion
 	wsService    *websocket.WebSocketService
-	cageRepo     cages.CageRepository
+	patientRepo  patients.PatientRepository
 	userRepo     *core.UserRepository
 	fcmSender    *fcm.FCMSender
 }
@@ -27,14 +27,14 @@ type CreateMotionController struct {
 func NewCreateMotionController(
 	createMotion *application.CreateMotion,
 	wsService *websocket.WebSocketService,
-	cageRepo cages.CageRepository,
+	patientRepo patients.PatientRepository,
 	userRepo *core.UserRepository,
 	fcmSender *fcm.FCMSender,
 ) *CreateMotionController {
 	return &CreateMotionController{
 		createMotion: createMotion,
 		wsService:    wsService,
-		cageRepo:     cageRepo,
+		patientRepo:     patientRepo,
 		userRepo:     userRepo,
 		fcmSender:    fcmSender,
 	}
@@ -58,64 +58,62 @@ func (h *CreateMotionController) Create(c *gin.Context) {
 }
 
 func (h *CreateMotionController) ProcessMotion(motion domain.Motion) error {
-    log.Printf("[DEBUG] Iniciando procesamiento de movimiento: %+v", motion)
-    
-    if err := h.createMotion.Execute(motion); err != nil {
-        log.Printf("[ERROR] Fallo al guardar movimiento: %v", err)
-        return err
-    }
+	log.Printf("[DEBUG] Iniciando procesamiento de movimiento: %+v", motion)
 
-    cage, err := h.cageRepo.GetCageByID(motion.IDHamster)
-    if err != nil {
-        log.Printf("[ERROR] No se pudo obtener jaula %s: %v", motion.IDHamster, err)
-        return err
-    }
+	if err := h.createMotion.Execute(motion); err != nil {
+		log.Printf("[ERROR] Fallo al guardar movimiento: %v", err)
+		return err
+	}
 
+	cage, err := h.patientRepo.GetPatientByID(fmt.Sprintf("%d", motion.IDPaciente))
+	if err != nil {
+		log.Printf("[ERROR] No se pudo obtener jaula %d: %v", motion.IDPaciente, err)
+		return err
+	}
 
+	wsData := gin.H{
+		"cage_id": motion.IDPaciente,
+		"data": gin.H{
+			"idpaciente":    motion.IDPaciente,
+			"movimiento":    motion.Movimiento,
+			"hora_registro": motion.HoraRegistro,
+		},
+		"event":     "new_motion",
+		"timestamp": time.Now().Unix(),
+	}
 
-    wsData := gin.H{
-        "cage_id": motion.IDHamster,
-        "data": gin.H{
-            "idhamster":     motion.IDHamster,
-            "movimiento":   motion.Movimiento,
-            "hora_registro": motion.HoraRegistro,
-        },
-        "event":     "new_motion",
-        "timestamp": time.Now().Unix(),
-    }
+	if err := h.wsService.NotifyUser(cage.IDDoctor, wsData); err != nil {
+		log.Printf("[WARN] Error notificando usuario %d via WebSocket: %v", cage.IDDoctor, err)
+	}
 
-    if err := h.wsService.NotifyUser(cage.Idusuario, wsData); err != nil {
-        log.Printf("[WARN] Error notificando usuario %d via WebSocket: %v", cage.Idusuario, err)
-    }
+	user, err := h.userRepo.GetUserByID(cage.IDDoctor)
+	if err != nil {
+		log.Printf("[ERROR] No se pudo obtener usuario %d: %v", cage.IDDoctor, err)
+		return fmt.Errorf("error obteniendo usuario: %v", err)
+	}
 
-    user, err := h.userRepo.GetUserByID(cage.Idusuario)
-    if err != nil {
-        log.Printf("[ERROR] No se pudo obtener usuario %d: %v", cage.Idusuario, err)
-        return fmt.Errorf("error obteniendo usuario: %v", err)
-    }
+	if user.FCMToken != "" {
+		status := "sin movimiento"
+		if motion.Movimiento {
+			status = "Movimiento detectado"
+		}
 
-    if user.FCMToken != "" {
-        status := "sin movimiento"
-        if motion.Movimiento {
-            status = "movimiento detectado"
-        }
-        
-        payload := fcm.NotificationPayload{
-            Title: "Detección de movimiento",
-            Body:  fmt.Sprintf("Jaula %s: %s", motion.IDHamster, status),
-            Data: map[string]string{
-                "cage_id":    motion.IDHamster,
-                "movimiento": fmt.Sprintf("%t", motion.Movimiento),
-                "timestamp":  time.Now().Format(time.RFC3339),
-                "event":      "new_motion",
-            },
-        }
+		payload := fcm.NotificationPayload{
+			Title: "Detección de movimiento",
+			Body:  fmt.Sprintf("Jaula %d: %s", motion.IDPaciente, status),
+			Data: map[string]string{
+				"patient_id":    fmt.Sprintf("%d", motion.IDPaciente),
+				"movimiento": fmt.Sprintf("%t", motion.Movimiento),
+				"timestamp":  time.Now().Format(time.RFC3339),
+				"event":      "new_motion",
+			},
+		}
 
-        if err := h.fcmSender.SendNotification(context.Background(), user.FCMToken, payload); err != nil {
-            log.Printf("[ERROR] Fallo al enviar notificación FCM: %v", err)
-        }
-    }
+		if err := h.fcmSender.SendNotification(context.Background(), user.FCMToken, payload); err != nil {
+			log.Printf("[ERROR] Fallo al enviar notificación FCM: %v", err)
+		}
+	}
 
-    log.Printf("[INFO] Notificación de movimiento enviada: %+v", wsData)
-    return nil
+	log.Printf("[INFO] Notificación de movimiento enviada: %+v", wsData)
+	return nil
 }

@@ -1,8 +1,8 @@
 package application
 
 import (
-	"esp32/src/internal/sensores/motion/domain"
 	"fmt"
+	"pulse_sense/src/internal/sensores/motion/domain"
 )
 
 type CreateMotion struct {
