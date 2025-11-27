@@ -3,7 +3,6 @@ package infrastructure
 import (
 	"database/sql"
 	"pulse_sense/src/core"
-	"pulse_sense/src/internal/services/fcm"
 	"pulse_sense/src/internal/users/application"
 	"pulse_sense/src/internal/users/infrastructure/controllers"
 	middleware "pulse_sense/src/server/middleware"
@@ -14,18 +13,16 @@ type UserDependencies struct {
 	AMQP         *core.AMQPConnection
 	Hasher       *core.BcryptHasher
 	UserRepo     *core.UserRepository
-	FCMSender    *fcm.FCMSender
 	AuthRepo     *core.AuthRepository
 	TokenService *core.JWTService
 }
 
-func NewUserDependencies(db *sql.DB, amqp *core.AMQPConnection, hasher *core.BcryptHasher, fcmSender *fcm.FCMSender, tokenService *core.JWTService, authRepo *core.AuthRepository, userRepo *core.UserRepository) *UserDependencies {
+func NewUserDependencies(db *sql.DB, amqp *core.AMQPConnection, hasher *core.BcryptHasher, tokenService *core.JWTService, authRepo *core.AuthRepository, userRepo *core.UserRepository) *UserDependencies {
 
 	return &UserDependencies{
 		DB:           db,
 		AMQP:         amqp,
 		Hasher:       hasher,
-		FCMSender:    fcmSender,
 		TokenService: tokenService,
 		AuthRepo:     authRepo,
 		UserRepo:     userRepo,

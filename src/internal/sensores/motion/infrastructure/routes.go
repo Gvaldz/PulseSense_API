@@ -13,11 +13,11 @@ type MotionRoutes struct {
 
 func NewMotionRoutes(
 	createMotionCreateMotionController *controllers.CreateMotionController,
-	getByHamsterController *controllers.GetByPatientController,
+	getBypatientController *controllers.GetByPatientController,
 ) *MotionRoutes {
 	return &MotionRoutes{
 		CreateMotionController: createMotionCreateMotionController,
-		GetByPatientController: getByHamsterController,
+		GetByPatientController: getBypatientController,
 	}
 }
 
@@ -25,6 +25,6 @@ func (r *MotionRoutes) AttachRoutes(router *gin.Engine) {
 	motionsGroup := router.Group("/motions")
 	{
 		motionsGroup.POST("", r.CreateMotionController.Create)
-		motionsGroup.GET("/hamster/:IDPatient", r.GetByPatientController.GetByPatient)
+		motionsGroup.GET("/patient/:IDPatient", r.GetByPatientController.GetByPatient)
 	}
 }

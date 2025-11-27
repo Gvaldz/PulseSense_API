@@ -1,8 +1,6 @@
 package app
 
 import (
-	"fmt"
-	"context"
 	"database/sql"
 	"pulse_sense/src/core"
 	"pulse_sense/src/server"
@@ -10,7 +8,6 @@ import (
 	patient 		"pulse_sense/src/internal/sensores/patients/infrastructure"
 	sign 			"pulse_sense/src/internal/sensores/signos/infrastructure"
 	login 			"pulse_sense/src/internal/services/auth/infrastructure"
-	fcm 			"pulse_sense/src/internal/services/fcm"
 	websocketapp 	"pulse_sense/src/internal/services/websocket/application"
 	websocketinfra  "pulse_sense/src/internal/services/websocket/infrastructure"
 	websocketc 		"pulse_sense/src/internal/services/websocket/infrastructure/controllers"
@@ -41,13 +38,6 @@ func NewApplication() (*Application, error) {
 
 	amqpConn, err := core.NewAMQPConnection()
 
-	if err != nil {
-		return nil, err
-	}
-	fcmSender, err := fcm.NewFCMSender(context.Background(), core.Config.FCM)
-	if err != nil {
-		return nil, fmt.Errorf("error inicializando FCM: %v", err)
-	}
 
 	hasher := core.NewBcryptHasher(12)
 	wsService := websocketapp.NewWebSocketService()
@@ -59,7 +49,6 @@ func NewApplication() (*Application, error) {
 		db,
 		amqpConn,
 		hasher,
-		fcmSender,
 		tokenService,
 		authRepo,
 		userRepo,
@@ -80,13 +69,13 @@ func NewApplication() (*Application, error) {
 	wsHandler := websocketc.NewWebSocketController(wsService, *tokenService)
 	wsRoutes := websocketinfra.NewWebSocketRoutes(wsHandler)
 	patientDeps := patient.NewPatientDependencies(db)
-	signDeps := sign.NewSignsDependencies(db, amqpConn, wsService, fcmSender, userRepo)
+	signDeps := sign.NewSignsDependencies(db, amqpConn, wsService, userRepo)
 	hospitalDeps := hospitals.NewHospitalDependencies(db)
 	workerDeps := workers.NewWorkerDependencies(db)
 	caregiversDeps := caregivers.NewCaregiverDependencies(db)
 	shiftsDeps := shifts.NewShiftDependencies(db)
 	userpatientDeps := userpatient.NewUserPatientDependencies(db)
-	motionDeps := motion.NewMotionDependencies(db, amqpConn, wsService, fcmSender, userRepo)
+	motionDeps := motion.NewMotionDependencies(db, amqpConn, wsService, userRepo)
 
 	server := server.NewServer(
 		signDeps.GetRoutes(),

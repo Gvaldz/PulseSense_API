@@ -3,11 +3,10 @@ package cmd
 import (
 	"log"
 	"pulse_sense/src/app"
-	"pulse_sense/src/core"
 )
 
 func Init() {
-	core.LoadConfig()
+
 
 
 	app, err := app.NewApplication()

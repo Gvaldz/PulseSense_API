@@ -2,40 +2,40 @@ package consumeramqp
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
-	"fmt"
 	"pulse_sense/src/core"
 
+	dependencesMotion "pulse_sense/src/internal/sensores/motion/domain"
+	controllersMotion "pulse_sense/src/internal/sensores/motion/infrastructure/controllers"
 	dependencesPatient "pulse_sense/src/internal/sensores/patients/domain"
 	controllersPatient "pulse_sense/src/internal/sensores/patients/infrastructure/controllers"
 	dependencesSigns "pulse_sense/src/internal/sensores/signos/domain"
 	controllersSigns "pulse_sense/src/internal/sensores/signos/infrastructure/controllers"
-	dependencesMotion "pulse_sense/src/internal/sensores/motion/domain"
-	controllersMotion "pulse_sense/src/internal/sensores/motion/infrastructure/controllers"
 
 	"github.com/joho/godotenv"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type RabbitMQConsumer struct {
-	conn           *core.AMQPConnection
-	CreateSign     *controllersSigns.CreateSignsController
-	CreatePatient  *controllersPatient.CreatePatientController
-	CreateMotion   *controllersMotion.CreateMotionController
+	conn          *core.AMQPConnection
+	CreateSign    *controllersSigns.CreateSignsController
+	CreatePatient *controllersPatient.CreatePatientController
+	CreateMotion  *controllersMotion.CreateMotionController
 }
 
 func NewRabbitMQConsumer(
-	conn *core.AMQPConnection, 
-	createSign *controllersSigns.CreateSignsController, 
+	conn *core.AMQPConnection,
+	createSign *controllersSigns.CreateSignsController,
 	createPatient *controllersPatient.CreatePatientController,
 	createMotion *controllersMotion.CreateMotionController,
 ) *RabbitMQConsumer {
 	return &RabbitMQConsumer{
-		conn:           conn,
-		CreateSign:     createSign,
-		CreatePatient:  createPatient,
-		CreateMotion:   createMotion,
+		conn:          conn,
+		CreateSign:    createSign,
+		CreatePatient: createPatient,
+		CreateMotion:  createMotion,
 	}
 }
 
@@ -65,9 +65,9 @@ func (c *RabbitMQConsumer) Start() {
 	}
 
 	err = ch.QueueBind(
-		"sensores",         // queue name
-		"sensores/signos",  // routing key
-		"amq.topic",        // exchange
+		"sensores",        // queue name
+		"sensores/signos", // routing key
+		"amq.topic",       // exchange
 		false,
 		nil,
 	)
@@ -83,12 +83,12 @@ func (c *RabbitMQConsumer) Start() {
 
 	for msg := range msgs {
 		var sensorData struct {
-			Sensor      string  `json:"sensor"`
-			IDPaciente  int     `json:"IDPaciente"`
-			Signo       int     `json:"Signo,omitempty"`
-			Valor       float64 `json:"Valor,omitempty"`
-			Unidad      string  `json:"Unidad,omitempty"`
-			Movimiento  int     `json:"movimiento,omitempty"`
+			Sensor     string  `json:"sensor"`
+			IDPaciente int     `json:"IDPaciente"`
+			Signo      int     `json:"Signo,omitempty"`
+			Valor      float64 `json:"Valor,omitempty"`
+			Unidad     string  `json:"Unidad,omitempty"`
+			Movimiento int     `json:"movimiento,omitempty"`
 		}
 
 		if err := json.Unmarshal(msg.Body, &sensorData); err != nil {
@@ -97,6 +97,22 @@ func (c *RabbitMQConsumer) Start() {
 		}
 
 		log.Printf("Mensaje recibido: Sensor: %s, IDPaciente: %v\n", sensorData.Sensor, sensorData.IDPaciente)
+
+		if sensorData.Sensor == "idpatient" {
+
+			if sensorData.IDPaciente == 0 {
+				log.Println("Advertencia: ID no valido.")
+				continue
+			}
+
+			paciente := dependencesPatient.Patient{
+				IdPaciente: int32(sensorData.IDPaciente),
+			}
+
+			if err := c.CreatePatient.Processpatient(paciente); err != nil {
+				log.Printf("Error al procesar paciente: %v", err)
+			}
+		}
 
 		if sensorData.Sensor == "IDPaciente" {
 			if sensorData.IDPaciente == 0 {
@@ -126,8 +142,8 @@ func (c *RabbitMQConsumer) Start() {
 			idPacienteInt := sensorData.IDPaciente
 			sign := dependencesSigns.Sign{
 				IDPaciente: idPacienteInt,
-				IDSigno:    sensorData.Signo,     
-				Valor:      sensorData.Valor,           
+				IDSigno:    sensorData.Signo,
+				Valor:      sensorData.Valor,
 				Unidad:     sensorData.Unidad,
 			}
 
@@ -149,7 +165,7 @@ func (c *RabbitMQConsumer) Start() {
 				log.Println("Advertencia: ID de paciente no válido para movimiento.")
 				continue
 			}
-			
+
 			mov := sensorData.Movimiento == 1
 			fmt.Printf("Mensaje de Movimiento recibido: %+v\n", sensorData)
 

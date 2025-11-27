@@ -9,11 +9,11 @@ import (
 )
 
 type GetByPatientController struct {
-	getByHamster *application.GetByPatient
+	getBypatient *application.GetByPatient
 }
 
-func NewGetByPatientController(getByHamster *application.GetByPatient) *GetByPatientController {
-	return &GetByPatientController{getByHamster: getByHamster}
+func NewGetByPatientController(getBypatient *application.GetByPatient) *GetByPatientController {
+	return &GetByPatientController{getBypatient: getBypatient}
 }
 func (h *GetByPatientController) GetByPatient(c *gin.Context) {
 	idPacienteStr := c.Param("idPaciente")
@@ -22,7 +22,7 @@ func (h *GetByPatientController) GetByPatient(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid idPaciente"})
 		return
 	}
-	motions, err := h.getByHamster.Execute(idPaciente)
+	motions, err := h.getBypatient.Execute(idPaciente)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
